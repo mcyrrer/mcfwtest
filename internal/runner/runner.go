@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -11,6 +12,18 @@ import (
 	"github.com/mcyrrer/mcfwtest/internal/config"
 	"github.com/mcyrrer/mcfwtest/internal/network"
 	"github.com/mcyrrer/mcfwtest/internal/probe"
+)
+
+// IPFilter represents IP version filtering mode
+type IPFilter int
+
+const (
+	// IPFilterBoth allows both IPv4 and IPv6 addresses
+	IPFilterBoth IPFilter = iota
+	// IPFilterIPv4Only filters to only IPv4 addresses
+	IPFilterIPv4Only
+	// IPFilterIPv6Only filters to only IPv6 addresses
+	IPFilterIPv6Only
 )
 
 // TestCase represents a single test to be executed
@@ -47,16 +60,18 @@ type Runner struct {
 	Concurrency int
 	FailFast    bool
 	Filter      string
+	IPFilter    IPFilter
 	Prober      probe.Prober
 }
 
 // New creates a new Runner
-func New(cfg *config.Config, concurrency int, failFast bool, filter string) *Runner {
+func New(cfg *config.Config, concurrency int, failFast bool, filter string, ipFilter IPFilter) *Runner {
 	return &Runner{
 		Config:      cfg,
 		Concurrency: concurrency,
 		FailFast:    failFast,
 		Filter:      filter,
+		IPFilter:    ipFilter,
 		Prober:      probe.NewTCPProber(),
 	}
 }
@@ -173,7 +188,37 @@ func (r *Runner) expandHosts(ep config.Endpoint) ([]string, error) {
 		}
 	}
 
+	// Apply IP version filtering
+	if r.IPFilter != IPFilterBoth {
+		hosts = r.filterIPsByVersion(hosts)
+	}
+
 	return hosts, nil
+}
+
+// filterIPsByVersion filters IP addresses based on the configured IP version filter
+func (r *Runner) filterIPsByVersion(ips []string) []string {
+	var filtered []string
+	for _, ip := range ips {
+		parsedIP := net.ParseIP(ip)
+		if parsedIP == nil {
+			continue
+		}
+
+		isIPv4 := parsedIP.To4() != nil
+
+		switch r.IPFilter {
+		case IPFilterIPv4Only:
+			if isIPv4 {
+				filtered = append(filtered, ip)
+			}
+		case IPFilterIPv6Only:
+			if !isIPv4 {
+				filtered = append(filtered, ip)
+			}
+		}
+	}
+	return filtered
 }
 
 // expandPorts expands the port/ports field
