@@ -41,7 +41,7 @@ func (p *UDPProber) Probe(ctx context.Context, host string, port int, timeout ti
 	targetIP := ips[0]
 
 	// Create UDP connection
-	addr := fmt.Sprintf("%s:%d", targetIP, port)
+	addr := net.JoinHostPort(targetIP, fmt.Sprintf("%d", port))
 	conn, err := net.DialTimeout("udp", addr, timeout)
 	if err != nil {
 		return Result{
