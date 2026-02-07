@@ -53,21 +53,30 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var createconfigCmd = &cobra.Command{
+	Use:   "createconfig",
+	Short: "Create a template configuration file",
+	Long:  "Generate a template configuration file with all valid configuration options to aid in creating your own config.",
+	RunE:  createConfig,
+}
+
 var (
-	configFile  string
-	outputMode  string
-	failFast    bool
-	concurrency int
-	filter      string
-	noColor     bool
-	exitCode    bool
-	quiet       bool
+	configFile   string
+	outputMode   string
+	failFast     bool
+	concurrency  int
+	filter       string
+	noColor      bool
+	exitCode     bool
+	quiet        bool
+	outputFile   string
 )
 
 func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(createconfigCmd)
 
 	// Run command flags
 	runCmd.Flags().StringVarP(&configFile, "config", "c", "fwprobe.yaml", "Path to config file")
@@ -81,6 +90,9 @@ func init() {
 
 	// Validate command flags
 	validateCmd.Flags().StringVarP(&configFile, "config", "c", "fwprobe.yaml", "Path to config file")
+
+	// Createconfig command flags
+	createconfigCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Write to file instead of stdout")
 }
 
 func runTests(cmd *cobra.Command, args []string) error {
@@ -165,6 +177,87 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("  Estimated tests: %d\n", totalTests)
+
+	return nil
+}
+
+func createConfig(cmd *cobra.Command, args []string) error {
+	templateConfig := `# FWProbe Configuration Template
+# This file contains all valid configuration options with examples
+
+version: "1"
+
+# Global defaults applied to all endpoints
+defaults:
+  # Default timeout for all tests (min: 100ms, max: 30s)
+  timeout: 2s
+  # Default protocol: tcp or udp
+  protocol: tcp
+
+# List of endpoints to test
+endpoints:
+  # Example 1: Single host and port
+  - name: example-web-server
+    description: Test if web server is accessible
+    host: example.com
+    port: 443
+    protocol: tcp
+    timeout: 5s
+    expect: open  # Expected result: "open" or "closed"
+
+  # Example 2: Multiple hosts with single port
+  - name: dns-servers
+    description: Test multiple DNS servers
+    hosts:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    port: 53
+    protocol: udp
+    timeout: 2s
+    expect: open
+
+  # Example 3: Single host with multiple ports
+  - name: common-ports
+    description: Test common ports on a server
+    host: 192.168.1.1
+    ports:
+      - 22
+      - 80
+      - 443
+    protocol: tcp
+    timeout: 3s
+    expect: open
+
+  # Example 4: CIDR range testing
+  - name: network-scan
+    description: Scan a subnet for SSH access
+    host: 192.168.1.0/24
+    port: 22
+    protocol: tcp
+    timeout: 1s
+    expect: closed
+
+  # Example 5: Expect closed port (firewall should block)
+  - name: blocked-service
+    description: Verify that a port is blocked
+    host: internal-server.local
+    port: 3306
+    protocol: tcp
+    timeout: 2s
+    expect: closed
+`
+
+	// Write to file or stdout
+	if outputFile != "" {
+		if err := os.WriteFile(outputFile, []byte(templateConfig), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Failed to write config file: %v\n", err)
+			return exitWithCode(1)
+		}
+		fmt.Printf("Template configuration written to: %s\n", outputFile)
+	} else {
+		fmt.Print(templateConfig)
+	}
 
 	return nil
 }
