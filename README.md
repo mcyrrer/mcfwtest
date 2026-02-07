@@ -6,6 +6,8 @@ FWProbe is a cross-platform, CLI-based network testing tool written in Go. It va
 
 - **TCP & UDP Testing**: Validate both TCP and UDP port accessibility
 - **CIDR Range Support**: Test entire network ranges (up to /16)
+- **IPv4/IPv6 Filtering**: Selectively test only IPv4 or IPv6 addresses
+- **Config Template Generator**: Quickly bootstrap configuration files with `createconfig` command
 - **Concurrent Execution**: Run multiple tests in parallel for fast results
 - **Multiple Output Formats**: Pretty terminal output, JSON, and JUnit XML
 - **Flexible Configuration**: YAML-based configuration with sensible defaults
@@ -30,7 +32,13 @@ go build -o fwprobe ./cmd/fwprobe
 
 ## Quick Start
 
-1. Create a configuration file `fwprobe.yaml`:
+1. Generate a template configuration file:
+
+```bash
+fwprobe createconfig > fwprobe.yaml
+```
+
+Or create a configuration file `fwprobe.yaml` manually:
 
 ```yaml
 version: "1"
@@ -148,10 +156,11 @@ endpoints:
 ### Commands
 
 ```
-fwprobe run         Run firewall tests
-fwprobe validate    Validate configuration file
-fwprobe version     Print version information
-fwprobe help        Help about any command
+fwprobe run            Run firewall tests
+fwprobe validate       Validate configuration file
+fwprobe createconfig   Create a template configuration file
+fwprobe version        Print version information
+fwprobe help           Help about any command
 ```
 
 ### `fwprobe run` Options
@@ -162,6 +171,8 @@ fwprobe help        Help about any command
     --fail-fast           Stop on first failure
 -j, --concurrency int     Max concurrent tests (default 10)
 -f, --filter string       Run only endpoints matching name pattern (glob)
+    --ipv4-only           Test only IPv4 addresses
+    --ipv6-only           Test only IPv6 addresses
     --no-color            Disable colored output
     --exit-code           Exit with code 1 if any test fails (default true)
 -q, --quiet               Only print failures and summary
@@ -171,6 +182,12 @@ fwprobe help        Help about any command
 
 ```
 -c, --config string    Path to config file (default "fwprobe.yaml")
+```
+
+### `fwprobe createconfig` Options
+
+```
+-o, --output string    Write to file instead of stdout
 ```
 
 ### Exit Codes
@@ -183,6 +200,18 @@ fwprobe help        Help about any command
 | `3` | Runtime error (permissions, network error) |
 
 ## Examples
+
+### Create Template Configuration
+
+Generate a template configuration file to get started:
+
+```bash
+# Output to stdout
+fwprobe createconfig
+
+# Write directly to a file
+fwprobe createconfig -o my-config.yaml
+```
 
 ### Validate Configuration
 
@@ -201,6 +230,22 @@ fwprobe run -c production.yaml
 ```bash
 fwprobe run --filter "mysql-*"
 ```
+
+### Test Only IPv4 or IPv6
+
+Test only IPv4 addresses (useful when IPv6 is not available or needed):
+
+```bash
+fwprobe run --ipv4-only
+```
+
+Test only IPv6 addresses:
+
+```bash
+fwprobe run --ipv6-only
+```
+
+This is particularly useful when testing dual-stack hosts that resolve to both IPv4 and IPv6 addresses.
 
 ### Stop on First Failure
 
@@ -255,7 +300,7 @@ All planned features have been implemented:
 - TCP connection testing with timeout detection
 - UDP probing with ICMP unreachable detection
 - Support for CIDR ranges (up to /16)
-- DNS hostname resolution
+- DNS hostname resolution with IPv4/IPv6 filtering
 - Concurrent test execution with configurable worker pool
 
 **Output Formats:**
@@ -265,9 +310,11 @@ All planned features have been implemented:
 
 **Configuration:**
 - YAML-based with strict validation
+- Template configuration generator (`createconfig` command)
 - Per-endpoint protocol and timeout overrides
 - Multiple hosts and ports per endpoint
 - Glob-based endpoint filtering
+- IPv4-only and IPv6-only filtering options
 
 **CI/CD:**
 - GitHub Actions workflows for testing and releases
