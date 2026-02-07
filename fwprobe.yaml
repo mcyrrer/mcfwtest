@@ -1,0 +1,59 @@
+# FWProbe Configuration Example
+# This file demonstrates the various configuration options available
+
+version: "1"
+
+# Global defaults applied to all endpoints unless overridden
+defaults:
+  timeout: 2s          # Connection timeout (100ms-30s)
+  protocol: tcp        # Default protocol: tcp or udp
+
+# Endpoint test definitions
+endpoints:
+  # Simple single host test
+  - name: google-dns
+    description: "Google Public DNS"
+    host: 8.8.8.8
+    port: 53
+    protocol: tcp
+    expect: open
+
+  # Test multiple ports on the same host
+  - name: web-server
+    description: "HTTP and HTTPS ports"
+    host: example.com
+    ports:
+      - 80
+      - 443
+    expect: open
+
+  # Test CIDR range (small network)
+  - name: local-subnet
+    description: "Test SSH on local subnet"
+    host: 192.168.1.0/29
+    port: 22
+    expect: closed
+
+  # Test multiple specific hosts
+  - name: dns-servers
+    description: "Internal DNS servers"
+    hosts:
+      - 8.8.8.8
+      - 8.8.4.4
+    port: 53
+    expect: open
+
+  # Test with custom timeout
+  - name: slow-service
+    description: "Service with longer timeout"
+    host: 192.0.2.1
+    port: 8080
+    timeout: 5s
+    expect: closed
+
+  # Verify port is blocked
+  - name: blocked-telnet
+    description: "Telnet should be blocked"
+    host: 127.0.0.1
+    port: 23
+    expect: closed

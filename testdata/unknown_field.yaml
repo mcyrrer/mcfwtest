@@ -1,0 +1,7 @@
+version: "1"
+
+endpoints:
+  - name: test
+    host: 127.0.0.1
+    port: 80
+    unknown_field: "should fail"

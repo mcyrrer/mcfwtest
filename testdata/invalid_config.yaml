@@ -1,0 +1,6 @@
+version: "1"
+
+endpoints:
+  - name: test
+    # Missing host
+    port: 80
