@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+# FWProbe binary
+fwprobe
+
 # Test binary, built with `go test -c`
 *.test
 

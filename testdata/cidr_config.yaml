@@ -1,0 +1,12 @@
+version: "1"
+
+defaults:
+  timeout: 2s
+  protocol: tcp
+
+endpoints:
+  - name: local-network
+    description: "Small CIDR range test"
+    host: 127.0.0.0/30
+    port: 22
+    expect: closed

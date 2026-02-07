@@ -1,0 +1,19 @@
+version: "1"
+
+defaults:
+  timeout: 2s
+  protocol: tcp
+
+endpoints:
+  - name: google-dns
+    description: "Google Public DNS"
+    host: 8.8.8.8
+    port: 53
+    protocol: tcp
+    expect: open
+
+  - name: localhost-http
+    description: "Local HTTP server"
+    host: 127.0.0.1
+    port: 80
+    expect: closed
