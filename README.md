@@ -4,12 +4,13 @@ FWProbe is a cross-platform, CLI-based network testing tool written in Go. It va
 
 ## Features
 
-- **TCP Connection Testing**: Validate TCP port accessibility
-- **CIDR Range Support**: Test entire network ranges
+- **TCP & UDP Testing**: Validate both TCP and UDP port accessibility
+- **CIDR Range Support**: Test entire network ranges (up to /16)
 - **Concurrent Execution**: Run multiple tests in parallel for fast results
+- **Multiple Output Formats**: Pretty terminal output, JSON, and JUnit XML
 - **Flexible Configuration**: YAML-based configuration with sensible defaults
-- **Pretty Terminal Output**: Color-coded results with Unicode formatting
-- **CI/CD Friendly**: Exit codes and multiple output formats planned
+- **Strict Validation**: Rejects unknown configuration fields to catch typos
+- **CI/CD Ready**: Exit codes, multiple output formats, and GitHub Actions workflows
 
 ## Installation
 
@@ -237,31 +238,41 @@ go test ./...
 go test ./... -cover
 ```
 
-## Current Status
+## Version History
 
-**Phase 1 Complete (v0.1)**:
-- ✅ Core TCP probing
-- ✅ YAML configuration parsing and validation
-- ✅ CIDR range expansion
-- ✅ DNS resolution
-- ✅ Concurrent test execution
-- ✅ Pretty terminal output
-- ✅ Comprehensive unit tests
+**v1.0 - All Milestones Complete** 🎉
 
-**Planned for Phase 2 (v0.2)**:
+All planned features have been implemented:
+
+- ✅ **Phase 1 (v0.1)**: Core TCP probing, YAML configuration, pretty output
+- ✅ **Phase 2 (v0.2)**: UDP probing, JSON output, JUnit XML output
+- ✅ **Phase 3 (v0.3)**: GitHub Actions CI/CD, GoReleaser, cross-compilation
+- ✅ **Phase 4 (v1.0)**: Complete documentation, code quality improvements
+
+### Key Features Implemented
+
+**Network Testing:**
+- TCP connection testing with timeout detection
 - UDP probing with ICMP unreachable detection
-- JSON output format
-- JUnit XML output format
+- Support for CIDR ranges (up to /16)
+- DNS hostname resolution
+- Concurrent test execution with configurable worker pool
 
-**Planned for Phase 3 (v0.3)**:
-- GitHub Actions CI/CD pipeline
-- GoReleaser for cross-compilation
-- Pre-built binaries for Linux and macOS
+**Output Formats:**
+- Pretty terminal output with color-coding and Unicode
+- JSON output for programmatic consumption
+- JUnit XML for CI/CD integration
 
-**Planned for Phase 4 (v1.0)**:
-- Complete documentation
-- Integration tests
-- Final polish and release
+**Configuration:**
+- YAML-based with strict validation
+- Per-endpoint protocol and timeout overrides
+- Multiple hosts and ports per endpoint
+- Glob-based endpoint filtering
+
+**CI/CD:**
+- GitHub Actions workflows for testing and releases
+- GoReleaser for automated binary builds
+- Cross-platform support (Linux and macOS, amd64 and arm64)
 
 ## Contributing
 

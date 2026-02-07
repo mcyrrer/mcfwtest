@@ -277,16 +277,22 @@ func (r *Runner) executeTests(ctx context.Context, testCases []TestCase) []TestR
 
 // executeTestCase executes a single test case
 func (r *Runner) executeTestCase(ctx context.Context, tc TestCase) TestResult {
-	// Only TCP is supported in Phase 1
-	if tc.Protocol != "tcp" {
+	// Select the appropriate prober based on protocol
+	var prober probe.Prober
+	switch tc.Protocol {
+	case "tcp":
+		prober = probe.NewTCPProber()
+	case "udp":
+		prober = probe.NewUDPProber()
+	default:
 		return TestResult{
 			TestCase: tc,
-			Error:    fmt.Errorf("protocol %q not supported in this version", tc.Protocol),
+			Error:    fmt.Errorf("unsupported protocol %q", tc.Protocol),
 		}
 	}
 
 	// Execute the probe
-	probeResult := r.Prober.Probe(ctx, tc.Host, tc.Port, tc.Timeout)
+	probeResult := prober.Probe(ctx, tc.Host, tc.Port, tc.Timeout)
 
 	// Determine pass/fail
 	pass := false

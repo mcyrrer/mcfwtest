@@ -1,0 +1,27 @@
+version: "1"
+
+defaults:
+  timeout: 2s
+  protocol: tcp
+
+endpoints:
+  - name: google-dns-tcp
+    description: "Google DNS over TCP"
+    host: 8.8.8.8
+    port: 53
+    protocol: tcp
+    expect: open
+
+  - name: google-dns-udp
+    description: "Google DNS over UDP"
+    host: 8.8.8.8
+    port: 53
+    protocol: udp
+    expect: open
+
+  - name: localhost-udp-filtered
+    description: "Filtered UDP port (ambiguous)"
+    host: 127.0.0.1
+    port: 9999
+    protocol: udp
+    expect: open  # UDP without response is treated as open|filtered
