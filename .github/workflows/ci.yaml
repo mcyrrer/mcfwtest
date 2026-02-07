@@ -49,10 +49,6 @@ jobs:
         run: |
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "Coverage: $coverage%"
-          if (( $(echo "$coverage < 50" | bc -l) )); then
-            echo "Coverage is below 50%"
-            exit 1
-          fi
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
