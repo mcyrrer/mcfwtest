@@ -261,6 +261,17 @@ func (r *Runner) executeTests(ctx context.Context, testCases []TestCase) []TestR
 
 	wg.Wait()
 
+	// Filter out unexecuted tests in fail-fast mode
+	if r.FailFast {
+		var executed []TestResult
+		for _, res := range results {
+			if res.TestCase.EndpointName != "" {
+				executed = append(executed, res)
+			}
+		}
+		return executed
+	}
+
 	return results
 }
 

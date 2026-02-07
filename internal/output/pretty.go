@@ -3,7 +3,9 @@ package output
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mcyrrer/mcfwtest/internal/runner"
@@ -27,19 +29,27 @@ func NewPrettyFormatter(w io.Writer, noColor, quiet bool) *PrettyFormatter {
 
 // Format outputs the test results in a human-readable format
 func (f *PrettyFormatter) Format(result *runner.RunResult, configFile string) error {
-	// Note: Color control is handled by the terminal environment
+	// Define styles - apply NoColor conditionally
+	var headerStyle, passStyle, failStyle, dimStyle, boldStyle lipgloss.Style
 
-	// Define styles
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("12")). // Cyan
-		Border(lipgloss.RoundedBorder()).
-		Padding(0, 1)
+	if f.NoColor {
+		headerStyle = lipgloss.NewStyle().Bold(true).Border(lipgloss.RoundedBorder()).Padding(0, 1)
+		passStyle = lipgloss.NewStyle()
+		failStyle = lipgloss.NewStyle()
+		dimStyle = lipgloss.NewStyle()
+		boldStyle = lipgloss.NewStyle().Bold(true)
+	} else {
+		headerStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("12")). // Cyan
+			Border(lipgloss.RoundedBorder()).
+			Padding(0, 1)
 
-	passStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // Green
-	failStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))  // Red
-	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))   // Gray
-	boldStyle := lipgloss.NewStyle().Bold(true)
+		passStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // Green
+		failStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))  // Red
+		dimStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))   // Gray
+		boldStyle = lipgloss.NewStyle().Bold(true)
+	}
 
 	// Print header
 	header := fmt.Sprintf("FWProbe — Firewall Rule Testing\nConfig: %s\nTests: %d | Concurrency: N/A",
@@ -106,7 +116,7 @@ func (f *PrettyFormatter) printTestResult(tr runner.TestResult, passStyle, failS
 	if tr.Error != nil {
 		symbol = "✘"
 		status = "ERROR"
-		details = tr.Error.Error()
+		details = sanitizeError(tr.Error)
 		style = failStyle
 	} else if tr.Pass {
 		symbol = "✔"
@@ -159,19 +169,13 @@ func (f *PrettyFormatter) groupByEndpoint(results []runner.TestResult) map[strin
 	return grouped
 }
 
-// getEndpointOrder returns endpoint names in the order they appear in results
+// getEndpointOrder returns endpoint names in a deterministic sorted order
 func (f *PrettyFormatter) getEndpointOrder(grouped map[string][]runner.TestResult) []string {
-	seen := make(map[string]bool)
-	var order []string
-
-	// Use the first result's order as the canonical order
+	order := make([]string, 0, len(grouped))
 	for name := range grouped {
-		if !seen[name] {
-			order = append(order, name)
-			seen[name] = true
-		}
+		order = append(order, name)
 	}
-
+	sort.Strings(order)
 	return order
 }
 
@@ -180,9 +184,41 @@ func formatLatency(d interface{}) string {
 	switch v := d.(type) {
 	case int:
 		return fmt.Sprintf("%dms", v)
+	case time.Duration:
+		return fmt.Sprintf("%dms", v.Milliseconds())
 	default:
-		// Assume time.Duration
-		ms := int(d.(interface{ Milliseconds() int64 }).Milliseconds())
-		return fmt.Sprintf("%dms", ms)
+		// Fallback for unexpected types
+		return fmt.Sprintf("%v", d)
 	}
+}
+
+// sanitizeError returns a user-safe error message without exposing internal details
+func sanitizeError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := err.Error()
+
+	// For network testing tool, we want to show meaningful errors
+	// but avoid exposing full system paths or internal stack traces
+	// Common errors like "connection refused", "timeout", "no route to host" are safe
+	safeErrors := []string{
+		"connection refused",
+		"timeout",
+		"no route to host",
+		"network unreachable",
+		"host unreachable",
+		"protocol not supported",
+		"failed to resolve hostname",
+	}
+
+	for _, safe := range safeErrors {
+		if strings.Contains(strings.ToLower(msg), safe) {
+			return msg
+		}
+	}
+
+	// For other errors, return a generic message
+	return "test execution error"
 }

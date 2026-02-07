@@ -29,8 +29,8 @@ func ExpandCIDR(cidr string) ([]string, error) {
 	// Special case for /31 (point-to-point link, both IPs are usable)
 	if ones == 31 {
 		return []string{
-			ip.String(),
-			incrementIP(ip).String(),
+			ipNet.IP.String(),
+			incrementIP(ipNet.IP).String(),
 		}, nil
 	}
 
