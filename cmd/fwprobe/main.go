@@ -62,6 +62,8 @@ var (
 	noColor     bool
 	exitCode    bool
 	quiet       bool
+	ipv4Only    bool
+	ipv6Only    bool
 )
 
 func init() {
@@ -78,12 +80,20 @@ func init() {
 	runCmd.Flags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 	runCmd.Flags().BoolVar(&exitCode, "exit-code", true, "Exit with code 1 if any test fails")
 	runCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print failures and summary")
+	runCmd.Flags().BoolVar(&ipv4Only, "ipv4-only", false, "Test only IPv4 addresses")
+	runCmd.Flags().BoolVar(&ipv6Only, "ipv6-only", false, "Test only IPv6 addresses")
 
 	// Validate command flags
 	validateCmd.Flags().StringVarP(&configFile, "config", "c", "fwprobe.yaml", "Path to config file")
 }
 
 func runTests(cmd *cobra.Command, args []string) error {
+	// Validate flags
+	if ipv4Only && ipv6Only {
+		fmt.Fprintf(os.Stderr, "Error: Cannot specify both --ipv4-only and --ipv6-only\n")
+		return exitWithCode(2)
+	}
+
 	// Load configuration
 	cfg, err := config.Load(configFile)
 	if err != nil {
@@ -91,8 +101,16 @@ func runTests(cmd *cobra.Command, args []string) error {
 		return exitWithCode(2)
 	}
 
+	// Determine IP filter mode
+	ipFilter := runner.IPFilterBoth
+	if ipv4Only {
+		ipFilter = runner.IPFilterIPv4Only
+	} else if ipv6Only {
+		ipFilter = runner.IPFilterIPv6Only
+	}
+
 	// Create runner
-	r := runner.New(cfg, concurrency, failFast, filter)
+	r := runner.New(cfg, concurrency, failFast, filter, ipFilter)
 
 	// Execute tests
 	ctx := context.Background()
