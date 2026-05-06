@@ -28,12 +28,13 @@ const (
 
 // TestCase represents a single test to be executed
 type TestCase struct {
-	EndpointName string
-	Host         string
-	Port         int
-	Protocol     string
-	Timeout      time.Duration
-	Expect       string
+	EndpointName   string
+	Host           string
+	Port           int
+	Protocol       string
+	Timeout        time.Duration
+	Expect         string
+	ExpansionError error // DNS or CIDR expansion error, if any
 }
 
 // TestResult represents the result of a single test execution
@@ -115,14 +116,40 @@ func (r *Runner) Run(ctx context.Context) (*RunResult, error) {
 }
 
 // expandTestCases expands endpoint configurations into individual test cases
+// DNS resolution errors are handled gracefully by creating error test cases
 func (r *Runner) expandTestCases() ([]TestCase, error) {
 	var testCases []TestCase
+	var errors []expansionError
 
 	for _, ep := range r.Config.Endpoints {
 		// Expand hosts
 		hosts, err := r.expandHosts(ep)
 		if err != nil {
-			return nil, fmt.Errorf("endpoint %q: %w", ep.Name, err)
+			// Instead of failing immediately, track the error and create an error test case
+			errors = append(errors, expansionError{
+				endpointName: ep.Name,
+				err:          err,
+			})
+
+			// Create a placeholder test case that will report the error
+			// Use the first port if available, otherwise use 0 as placeholder
+			port := 0
+			if ep.Port != 0 {
+				port = ep.Port
+			} else if len(ep.Ports) > 0 {
+				port = ep.Ports[0]
+			}
+
+			testCases = append(testCases, TestCase{
+				EndpointName:    ep.Name,
+				Host:            ep.Host, // Use the original host that failed
+				Port:            port,
+				Protocol:        ep.Protocol,
+				Timeout:         ep.Timeout.Duration,
+				Expect:          ep.Expect,
+				ExpansionError:  err, // Store the error for later reporting
+			})
+			continue
 		}
 
 		// Expand ports
@@ -144,6 +171,12 @@ func (r *Runner) expandTestCases() ([]TestCase, error) {
 	}
 
 	return testCases, nil
+}
+
+// expansionError tracks errors during test case expansion
+type expansionError struct {
+	endpointName string
+	err          error
 }
 
 // expandHosts expands the host/hosts field, handling CIDR ranges and DNS resolution
@@ -322,6 +355,14 @@ func (r *Runner) executeTests(ctx context.Context, testCases []TestCase) []TestR
 
 // executeTestCase executes a single test case
 func (r *Runner) executeTestCase(ctx context.Context, tc TestCase) TestResult {
+	// Check if there was an expansion error (DNS resolution, CIDR expansion, etc.)
+	if tc.ExpansionError != nil {
+		return TestResult{
+			TestCase: tc,
+			Error:    tc.ExpansionError,
+		}
+	}
+
 	// Select the appropriate prober based on protocol
 	var prober probe.Prober
 	switch tc.Protocol {
